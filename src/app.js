@@ -4,7 +4,8 @@ import cookieParser from "cookie-parser";
 const app= express();
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN         //for allowing anyone to talk with out backend
+    origin: process.env.CORS_ORIGIN,         //for allowing anyone to talk with out backend
+    credentials: true
 }))
 
 //we use "use" for configurations
