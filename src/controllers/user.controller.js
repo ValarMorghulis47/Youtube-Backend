@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
+import jwt from "jsonwebtoken"
 
 const generateTokens = async (userId) => {
     try {
@@ -99,7 +100,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password, username } = req.body;
-    console.log(email, password)
+    // console.log(email, password)
     if ([username, email, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All Fields Are Required");
     }
@@ -156,4 +157,39 @@ const logoutUser= asyncHandler(async (req, res)=>{
     )
 })
 
-export { registerUser, loginUser, logoutUser };
+const refereshAccessToken= asyncHandler(async (req, res)=>{
+    const incomingrefreshtoken= req.cookies.refreshToken || req.body.refreshToken;
+    if (!incomingrefreshtoken) {
+        throw new ApiError(400, "Refresh Token is required");
+    }
+    try {
+        const decodedToken = jwt.verify(
+            incomingrefreshtoken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+        const user= await User.findById(decodedToken?._id);
+        if (!user) {
+            throw new ApiError(400, "Invalid Refresh Token");
+        }
+        if (incomingrefreshtoken !==user?.refreshToken) {
+            throw new ApiError(404, "Refresh Token Is Expired");
+        }
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+        const {accessToken, newrefreshToken} = await generateTokens(user._id);
+        return res.status(200)
+       .cookie("accessToken", accessToken, options)
+       .cookie("refreshToken", newrefreshToken, options)
+       .json(
+        new ApiResponse(200, {
+            accessToken, refreshToken: newrefreshToken
+        }, "Refresh Token Refreshed")
+       )
+    } catch (error) {
+        throw new ApiError(405, error?.message || "Invalid Refresh Token");
+    }
+})
+
+export { registerUser, loginUser, logoutUser , refereshAccessToken };
