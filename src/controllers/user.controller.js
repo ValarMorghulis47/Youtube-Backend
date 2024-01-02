@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import ApiError from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteFromCloudinary } from "../utils/DeleteFileCloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 
@@ -250,15 +251,20 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     if (!avatar) {
         throw new ApiError(408, "Error while uploading avatar file on cloudinary");
     }
-    const user = await User.findByIdAndUpdate(req.user?._id, {
+    const user = await User.findById(req.user?._id).select("avatar");
+    const previousPublicId = user.avatar ? user.avatar.split("/").pop().split(".")[0] : null;
+    const updateduser = await User.findByIdAndUpdate(req.user?._id, {
         $set: {
             avatar: avatar.url
         }
     }, {
         new: true
     }).select("-password");
+    if (previousPublicId) {
+        await deleteFromCloudinary(previousPublicId);
+    }
     return res.status(200).json(
-        new ApiResponse(200, user, "Avatar Updated Successfully")
+        new ApiResponse(200, updateduser, "Avatar Updated Successfully")
     )
 })
 
@@ -271,7 +277,9 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     if (!coverimage) {
         throw new ApiError(408, "Error while uploading cover image file on cloudinary");
     }
-    const user = await User.findByIdAndUpdate(req.user?._id, {
+    const user = await User.findById(req.user?._id).select("coverimage");
+    const previousPublicId = user.coverimage ? user.coverimage.split("/").pop().split(".")[0] : null;
+    const updateduser = await User.findByIdAndUpdate(req.user?._id, {
         $set: {
             coverimage: coverimage.url
         }
@@ -279,8 +287,11 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         {
             new: true
         }).select("-password")
+    if (previousPublicId) {
+        await deleteFromCloudinary(previousPublicId);
+    }
     return res.status(200).json(
-        new ApiResponse(200, user, "Cover Image Updated Successfully")
+        new ApiResponse(200, updateduser, "Cover Image Updated Successfully")
     )
 })
 
