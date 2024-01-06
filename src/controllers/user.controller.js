@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import ApiError from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
-import { deleteFromCloudinary } from "../utils/DeleteFileCloudinary.js"
+import { DeleteFileCloudinary } from "../utils/DeleteFileCloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
@@ -139,8 +139,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },
         {
@@ -229,6 +229,10 @@ const upDateUserDetails = asyncHandler(async (req, res) => {
     if (!(fullname && email && username)) {
         throw new ApiError(410, "All Fields Are Required");
     }
+    const existedUser = await User.findOne({username})
+    if (existedUser?.username === username) {
+        throw new ApiError(408, "Username Already Exists");
+    }
     const user = await User.findByIdAndUpdate(req.user?._id, {
         $set: {
             fullname,   /*or we can write it as fullname: fullname, email: email, username: username */
@@ -262,7 +266,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         new: true
     }).select("-password");
     if (previousPublicId) {
-        await deleteFromCloudinary(previousPublicId);
+        await DeleteFileCloudinary(previousPublicId);
     }
     return res.status(200).json(
         new ApiResponse(200, updateduser, "Avatar Updated Successfully")
@@ -289,7 +293,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             new: true
         }).select("-password")
     if (previousPublicId) {
-        await deleteFromCloudinary(previousPublicId);
+        await DeleteFileCloudinary(previousPublicId);
     }
     return res.status(200).json(
         new ApiResponse(200, updateduser, "Cover Image Updated Successfully")
@@ -421,4 +425,23 @@ const getUserWatchHistory = asyncHandler(async (req, res)=>{
     )
 })
 
-export { registerUser, loginUser, logoutUser, refereshAccessToken, changeCurrentPassword, getCurrentUser, upDateUserDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getUserWatchHistory };
+const deleteUserAccount = asyncHandler(async (req, res)=>{
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+        throw new ApiError(400, "User Does Not Exist");
+    }
+    const previousAvatarPublicId = user.avatar ? user.avatar.split("/").pop().split(".")[0] : null;
+    if (previousAvatarPublicId) {
+        await DeleteFileCloudinary(previousAvatarPublicId);
+    }
+    const previousCoverImagePublicId = user.coverimage? user.coverimage.split("/").pop().split(".")[0] : null;
+    if (previousCoverImagePublicId) {
+        await DeleteFileCloudinary(previousCoverImagePublicId);
+    }
+    await User.findByIdAndDelete(req.user?._id);
+    return res.status(200).json(
+        new ApiResponse(200, {}, "User Deleted Successfully")
+    )
+})
+
+export { registerUser, loginUser, logoutUser, refereshAccessToken, changeCurrentPassword, getCurrentUser, upDateUserDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getUserWatchHistory, deleteUserAccount };
