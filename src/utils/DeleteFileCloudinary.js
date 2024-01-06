@@ -13,6 +13,7 @@ const DeleteFileCloudinary = async (publicId) => {
         const response = await cloudinary.uploader.destroy(publicId, {
             resource_type: "auto"
         })
+        console.log(`The response from the cloudinary after deleting the file is ${response}`)
         return response;
     } catch (error) {
         return null;
