@@ -53,8 +53,6 @@ const registerUser = asyncHandler(async (req, res) => {
     if (existedUser) {
         throw new ApiError(408, "Username or Email Already Exists");
     }
-    // console.log(req.files);
-
     // const avatarLocalPath = req.files?.avatar[0]?.path;
     // const coverImageLocalPath = req.files?.coverimage[0]?.path;
     let avatarLocalPath;
@@ -72,9 +70,10 @@ const registerUser = asyncHandler(async (req, res) => {
     else {
         throw new ApiError(408, "Cover Image File Is Required");
     }
-
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverimage = await uploadOnCloudinary(coverImageLocalPath);
+    const avatarFolder = "avatar";
+    const coverimageFolder = "coverimage";
+    const avatar = await uploadOnCloudinary(avatarLocalPath , avatarFolder);
+    const coverimage = await uploadOnCloudinary(coverImageLocalPath , coverimageFolder);
 
     // if (!avatar) {
     //     throw new ApiError(408, "Avatar File Is Required");
@@ -86,7 +85,9 @@ const registerUser = asyncHandler(async (req, res) => {
         coverimage: coverimage.url,
         email,
         username,
-        password
+        password,
+        avatarPublicId: avatar.public_id,
+        coverimagePublicId: coverimage.public_id
     })
 
     const createdUser = await User.findById(user._id).select(
@@ -257,7 +258,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(408, "Error while uploading avatar file on cloudinary");
     }
     const user = await User.findById(req.user?._id).select("avatar");
-    const previousPublicId = user.avatar ? user.avatar.split("/").pop().split(".")[0] : null;
+    const previousPublicId = user.avatarPublicId;
     const updateduser = await User.findByIdAndUpdate(req.user?._id, {
         $set: {
             avatar: avatar.url
@@ -283,7 +284,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         throw new ApiError(408, "Error while uploading cover image file on cloudinary");
     }
     const user = await User.findById(req.user?._id).select("coverimage");
-    const previousPublicId = user.coverimage ? user.coverimage.split("/").pop().split(".")[0] : null;
+    const previousPublicId = user.coverimagePublicId;
     const updateduser = await User.findByIdAndUpdate(req.user?._id, {
         $set: {
             coverimage: coverimage.url
@@ -430,11 +431,12 @@ const deleteUserAccount = asyncHandler(async (req, res)=>{
     if (!user) {
         throw new ApiError(400, "User Does Not Exist");
     }
-    const previousAvatarPublicId = user.avatar ? user.avatar.split("/").pop().split(".")[0] : null;
+    // const previousAvatarPublicId = user.avatar ? user.avatar.split("/").pop().split(".")[0] : null;
+    const previousAvatarPublicId = user.avatarPublicId;
     if (previousAvatarPublicId) {
         await DeleteFileCloudinary(previousAvatarPublicId);
     }
-    const previousCoverImagePublicId = user.coverimage? user.coverimage.split("/").pop().split(".")[0] : null;
+    const previousCoverImagePublicId = user.coverimagePublicId
     if (previousCoverImagePublicId) {
         await DeleteFileCloudinary(previousCoverImagePublicId);
     }
