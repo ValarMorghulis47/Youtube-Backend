@@ -253,7 +253,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     if (!avatarLocalPath) {
         throw new ApiError(408, "Avatar File Is Required");
     }
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    const avatarFolder = "avatar";
+    const avatar = await uploadOnCloudinary(avatarLocalPath, avatarFolder);
     if (!avatar) {
         throw new ApiError(408, "Error while uploading avatar file on cloudinary");
     }
@@ -267,7 +268,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         new: true
     }).select("-password");
     if (previousPublicId) {
-        await DeleteFileCloudinary(previousPublicId);
+        await DeleteFileCloudinary(previousPublicId , avatarFolder);
     }
     return res.status(200).json(
         new ApiResponse(200, updateduser, "Avatar Updated Successfully")
@@ -279,7 +280,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     if (!coverImageLocalPath) {
         throw new ApiError(408, "Cover Image File Is Required");
     }
-    const coverimage = await uploadOnCloudinary(coverImageLocalPath);
+    const coverimageFolder = "coverimage";
+    const coverimage = await uploadOnCloudinary(coverImageLocalPath, coverimageFolder);
     if (!coverimage) {
         throw new ApiError(408, "Error while uploading cover image file on cloudinary");
     }
@@ -294,7 +296,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             new: true
         }).select("-password")
     if (previousPublicId) {
-        await DeleteFileCloudinary(previousPublicId);
+        await DeleteFileCloudinary(previousPublicId , coverimageFolder);
     }
     return res.status(200).json(
         new ApiResponse(200, updateduser, "Cover Image Updated Successfully")
@@ -433,12 +435,14 @@ const deleteUserAccount = asyncHandler(async (req, res)=>{
     }
     // const previousAvatarPublicId = user.avatar ? user.avatar.split("/").pop().split(".")[0] : null;
     const previousAvatarPublicId = user.avatarPublicId;
+    const avatarFolder = "avatar";
     if (previousAvatarPublicId) {
-        await DeleteFileCloudinary(previousAvatarPublicId);
+        await DeleteFileCloudinary(previousAvatarPublicId , avatarFolder);
     }
+    const coverimageFolder = "coverimage";
     const previousCoverImagePublicId = user.coverimagePublicId
     if (previousCoverImagePublicId) {
-        await DeleteFileCloudinary(previousCoverImagePublicId);
+        await DeleteFileCloudinary(previousCoverImagePublicId , coverimageFolder);
     }
     await User.findByIdAndDelete(req.user?._id);
     return res.status(200).json(

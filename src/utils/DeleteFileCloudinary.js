@@ -6,13 +6,15 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const DeleteFileCloudinary = async (publicId) => {
+const DeleteFileCloudinary = async (publicId , folder) => {
     try {
         if (!publicId) return null;
         //Delete from cloudinary
-        await cloudinary.uploader.destroy(publicId)
+        await cloudinary.uploader.destroy(publicId , {
+            folder: folder
+        })
     } catch (error) {
-        return null;
+        console.error('Error deleting file from Cloudinary:', error);
     }
 
 }
