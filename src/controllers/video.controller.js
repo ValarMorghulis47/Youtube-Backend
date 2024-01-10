@@ -6,6 +6,7 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { DeleteFileCloudinary } from "../utils/DeleteFileCloudinary.js"
+import { DeleteVideoCloudinary } from "../utils/DeleteVideoCloudinary.js"
 
 const publishAVideo = asyncHandler(async (req, res)=>{
     const { title, description} = req.body
@@ -33,10 +34,14 @@ const publishAVideo = asyncHandler(async (req, res)=>{
     const videoFolder = "video";
     const thumbnailFolder = "thumbnail";
     const videores = await uploadOnCloudinary(videoLocalPath , videoFolder);
+    console.log(videores);
+    if (!videores) {
+        throw new ApiError(408, "Error while uploading video file on cloudinary");
+    }
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath , thumbnailFolder);
-    // if (!videores || !thumbnail) {
-    //     throw new ApiError(408, "Error while uploading video or thumbnail file on cloudinary");
-    // }
+    if (!thumbnail) {
+        throw new ApiError(408, "Error while uploading thumbnail file on cloudinary");
+    }
     const video = await Video.create({
         videoFile : videores.url,
         thumbnail: thumbnail.url,
@@ -57,9 +62,10 @@ const publishAVideo = asyncHandler(async (req, res)=>{
 })
 
 const updateVideo = asyncHandler(async (req, res)=>{
-    const {previousvideoId} = req.params;
+    const {videoId} = req.params;
+    const newVideoId = "video/"+videoId;
     const {title, description} = req.body;
-    const previousThumbnailPublicId = await Video.findOne({previousvideoId}).select("thumbnailPublicId");
+    const previousThumbnailPublicId = await Video.findOne({videoPublicId: newVideoId}).select("thumbnailPublicId");
     const newId = previousThumbnailPublicId.thumbnailPublicId;
     if (!(title && description)) {
         throw new ApiError(410, "All Fields Are Required");
@@ -70,10 +76,11 @@ const updateVideo = asyncHandler(async (req, res)=>{
     }
     const folder = "thumbnail"
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath, folder);
+    console.log(thumbnail);
     if (!thumbnail) {
         throw new ApiError(408, "Error while uploading thumbnail file on cloudinary");
     }
-    const updatedVideo = await Video.findOneAndUpdate(previousvideoId, {
+    const updatedVideo = await Video.findOneAndUpdate({thumbnailPublicId : newId}, {
         title: title,
         description: description,
         thumbnail: thumbnail.url,
@@ -91,12 +98,15 @@ const updateVideo = asyncHandler(async (req, res)=>{
 
 const deleteVideo = asyncHandler(async (req, res)=>{
     const {videoId} = req.params;
-    const Video_Id = await Video.findOne({videoId}).select("_id videoPublicId");
+    const newVideoId = "video/"+videoId;
+    const Video_Id = await Video.findOne({videoPublicId: newVideoId}).select("_id videoPublicId thumbnailPublicId");
     if (!Video_Id) {
         throw new ApiError(404, "Video Not Found");
     }
     const folder = "video";
-    await DeleteFileCloudinary(Video_Id.videoPublicId , folder);
+    const thumbnail = "thumbnail";
+    await DeleteVideoCloudinary(Video_Id.videoPublicId , folder);
+    await DeleteFileCloudinary(Video_Id.thumbnailPublicId , thumbnail);
     await Video.findByIdAndDelete(Video_Id._id);
     return res.status(200).json(
         new ApiResponse(200, {}, "Video Deleted Successfully")
