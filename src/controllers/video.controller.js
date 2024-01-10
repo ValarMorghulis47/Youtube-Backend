@@ -89,11 +89,25 @@ const updateVideo = asyncHandler(async (req, res)=>{
     )
 })
 
+const deleteVideo = asyncHandler(async (req, res)=>{
+    const {videoId} = req.params;
+    const Video_Id = await Video.findOne({videoId}).select("_id videoPublicId");
+    if (!Video_Id) {
+        throw new ApiError(404, "Video Not Found");
+    }
+    const folder = "video";
+    await DeleteFileCloudinary(Video_Id.videoPublicId , folder);
+    await Video.findByIdAndDelete(Video_Id._id);
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Video Deleted Successfully")
+    )
+})
+
 export {
     // getAllVideos,
     publishAVideo,
     // getVideoById,
     updateVideo,
-    // deleteVideo,
+    deleteVideo,
     // togglePublishStatus
 }
