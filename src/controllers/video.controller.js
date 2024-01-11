@@ -113,6 +113,18 @@ const deleteVideo = asyncHandler(async (req, res)=>{
     )
 })
 
+const getVideoById = asyncHandler(async (req, res)=>{
+    const {videoId} = req.params;
+    const newVideoId = "video/"+videoId;
+    const video = await Video.aggregate([
+        {
+            $match: {
+                
+            }
+        }
+    ])
+})
+
 export {
     // getAllVideos,
     publishAVideo,
