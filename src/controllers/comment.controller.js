@@ -15,6 +15,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
     if (!result) {
         throw new ApiError(404, "Video Not Found");
     }
+    const skip = (page - 1) * limit;
     const AllComments = await Video.aggregate([
         {
             $match: {
@@ -77,7 +78,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
         {
             $project: {
               TotalComments:1,
-              comments:1
+              comments:{
+                $slice: ["$comments", skip, parseInt(limit)]
+            }
             }
         }
     ])
