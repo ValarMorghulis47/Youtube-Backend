@@ -31,16 +31,7 @@ const registerUser = asyncHandler(async (req, res) => {
     // remove password and refresh token field from response
     // check for user creation
     // return res
-
-
-    // const { fullname, username, email, password } = req.body;
-    // if (![fullname, username, email, password].every((field) => typeof field === 'string' && field.trim() !== "")) {
-    //     throw new ApiError(400, "All Fields Are Required");
-    // }
-
     const { fullname, username, email, password } = req.body;
-    // console.log(`emial ${typeof email}`);
-    // console.log(req.body)
     if ([fullname, username, email, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All Fields Are Required");
     }
@@ -53,8 +44,6 @@ const registerUser = asyncHandler(async (req, res) => {
     if (existedUser) {
         throw new ApiError(408, "Username or Email Already Exists");
     }
-    // const avatarLocalPath = req.files?.avatar[0]?.path;
-    // const coverImageLocalPath = req.files?.coverimage[0]?.path;
     let avatarLocalPath;
     if (req.files && Array.isArray(req.files.avatar) && req.files.avatar.length > 0) {
         avatarLocalPath = req.files.avatar[0].path
@@ -74,11 +63,6 @@ const registerUser = asyncHandler(async (req, res) => {
     const coverimageFolder = "coverimage";
     const avatar = await uploadOnCloudinary(avatarLocalPath , avatarFolder);
     const coverimage = await uploadOnCloudinary(coverImageLocalPath , coverimageFolder);
-
-    // if (!avatar) {
-    //     throw new ApiError(408, "Avatar File Is Required");
-    // }
-
     const user = await User.create({
         fullname,
         avatar: avatar.url,
