@@ -34,7 +34,6 @@ const publishAVideo = asyncHandler(async (req, res)=>{
     const videoFolder = "video";
     const thumbnailFolder = "thumbnail";
     const videores = await uploadOnCloudinary(videoLocalPath , videoFolder);
-    console.log(videores);
     if (!videores) {
         throw new ApiError(408, "Error while uploading video file on cloudinary");
     }
@@ -76,7 +75,6 @@ const updateVideo = asyncHandler(async (req, res)=>{
     }
     const folder = "thumbnail"
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath, folder);
-    console.log(thumbnail);
     if (!thumbnail) {
         throw new ApiError(408, "Error while uploading thumbnail file on cloudinary");
     }
