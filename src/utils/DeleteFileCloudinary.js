@@ -13,7 +13,6 @@ const DeleteFileCloudinary = async (publicId , folder) => {
        const result = await cloudinary.uploader.destroy(publicId , {
             folder: folder
         })
-        console.log(result);
     } catch (error) {
         console.error('Error deleting file from Cloudinary:', error);
     }

@@ -61,8 +61,8 @@ const registerUser = asyncHandler(async (req, res) => {
     }
     const avatarFolder = "avatar";
     const coverimageFolder = "coverimage";
-    const avatar = await uploadOnCloudinary(avatarLocalPath , avatarFolder);
-    const coverimage = await uploadOnCloudinary(coverImageLocalPath , coverimageFolder);
+    const avatar = await uploadOnCloudinary(avatarLocalPath, avatarFolder);
+    const coverimage = await uploadOnCloudinary(coverImageLocalPath, coverimageFolder);
     const user = await User.create({
         fullname,
         avatar: avatar.url,
@@ -213,7 +213,7 @@ const upDateUserDetails = asyncHandler(async (req, res) => {
     if (!(fullname && email && username)) {
         throw new ApiError(410, "All Fields Are Required");
     }
-    const existedUser = await User.findOne({username})
+    const existedUser = await User.findOne({ username })
     if (existedUser?.username === username) {
         throw new ApiError(408, "Username Already Exists");
     }
@@ -251,7 +251,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         new: true
     }).select("-password");
     if (previousPublicId) {
-        await DeleteFileCloudinary(previousPublicId , avatarFolder);
+        await DeleteFileCloudinary(previousPublicId, avatarFolder);
     }
     return res.status(200).json(
         new ApiResponse(200, updateduser, "Avatar Updated Successfully")
@@ -279,15 +279,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             new: true
         }).select("-password")
     if (previousPublicId) {
-        await DeleteFileCloudinary(previousPublicId , coverimageFolder);
+        await DeleteFileCloudinary(previousPublicId, coverimageFolder);
     }
     return res.status(200).json(
         new ApiResponse(200, updateduser, "Cover Image Updated Successfully")
     )
 })
 
-const getUserChannelProfile = asyncHandler(async (req, res)=>{
-    const {username} = req.params;
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.params;
     if (!username?.trim()) {
         throw new ApiError(410, "Username Is Missing");
     }
@@ -323,7 +323,7 @@ const getUserChannelProfile = asyncHandler(async (req, res)=>{
                 },
                 isSubcribed: {
                     $cond: {
-                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
                         then: true,
                         else: false
                     }
@@ -352,7 +352,7 @@ const getUserChannelProfile = asyncHandler(async (req, res)=>{
     )
 })
 
-const getUserWatchHistory = asyncHandler(async (req, res)=>{
+const getUserWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
         {
             $match: {
@@ -385,7 +385,7 @@ const getUserWatchHistory = asyncHandler(async (req, res)=>{
                     },
                     {
                         $addFields: {
-                            owner:  {
+                            owner: {
                                 $arrayElemAt: ["$owner", 0]
                             }
                         }
@@ -395,13 +395,12 @@ const getUserWatchHistory = asyncHandler(async (req, res)=>{
         },
         {
             $addFields: {
-                watchHistory:  {
+                watchHistory: {
                     $arrayElemAt: ["$watchHistory", 0]
                 }
             }
         }
     ])
-    console.log(`The Watch History is:  ${user}`);
     if (!user?.length) {
         throw new ApiError(409, "Watch History Is Empty");
     }
@@ -411,7 +410,7 @@ const getUserWatchHistory = asyncHandler(async (req, res)=>{
     )
 })
 
-const deleteUserAccount = asyncHandler(async (req, res)=>{
+const deleteUserAccount = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user?._id);
     if (!user) {
         throw new ApiError(400, "User Does Not Exist");
@@ -420,12 +419,12 @@ const deleteUserAccount = asyncHandler(async (req, res)=>{
     const previousAvatarPublicId = user.avatarPublicId;
     const avatarFolder = "avatar";
     if (previousAvatarPublicId) {
-        await DeleteFileCloudinary(previousAvatarPublicId , avatarFolder);
+        await DeleteFileCloudinary(previousAvatarPublicId, avatarFolder);
     }
     const coverimageFolder = "coverimage";
     const previousCoverImagePublicId = user.coverimagePublicId
     if (previousCoverImagePublicId) {
-        await DeleteFileCloudinary(previousCoverImagePublicId , coverimageFolder);
+        await DeleteFileCloudinary(previousCoverImagePublicId, coverimageFolder);
     }
     await User.findByIdAndDelete(req.user?._id);
     return res.status(200).json(

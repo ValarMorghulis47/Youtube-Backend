@@ -14,7 +14,6 @@ const DeleteVideoCloudinary = async (publicId , folder) => {
             folder: folder,
             resource_type: 'video'
         })
-        console.log(result);
     } catch (error) {
         console.error('Error deleting file from Cloudinary:', error);
     }
