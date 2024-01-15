@@ -129,13 +129,9 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video Not Found");
     }
     const videoExistsHistory = await User.findOne({ watchHistory: videoExists._id });
-    if (videoExistsHistory) {
-        throw new ApiError(404, "Video Is Already In the history");
-    }
-    user.watchHistory.push(videoExists);
-    const save = await user.save();
-    if (!save) {
-        throw new ApiError(505, "Something went wrong while adding a video to the playlist");
+    if (!videoExistsHistory) {
+        user.watchHistory.push(videoExists);
+        await user.save();
     }
     await Video.findByIdAndUpdate(videoExists._id, {
         $inc: { view: 1 }
