@@ -6,14 +6,16 @@ import { DeleteFileCloudinary } from "../utils/DeleteFileCloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
+import { Video } from "../models/video.model.js"
+import { sendmail } from "../utils/SendEmail.js"
 
 const generateTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
         const accessToken = user.generateAccessToken()
         const refreshToken = user.generateRefreshToken()
-        user.refreshToken = refreshToken; // adding refresh token in the user database
-        await user.save({ ValidateBeforeSave: false }) //dont validate. we just want save the referesh token in the database
+        // user.refreshToken = refreshToken; // adding refresh token in the user database
+        // await user.save({ ValidateBeforeSave: false }) //dont validate. we just want save the referesh token in the database
         return { accessToken, refreshToken };
     } catch (error) {
         throw new ApiError(500, "Something went wrong while making the tokens")
@@ -75,7 +77,7 @@ const registerUser = asyncHandler(async (req, res) => {
     })
 
     const createdUser = await User.findById(user._id).select(
-        "-password -refreshToken"
+        "-password"
     )
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registring the user");
@@ -104,7 +106,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Invalid Password")
     }
     const { accessToken, refreshToken } = await generateTokens(user._id);
-    const loggedinuser = await User.findById(user._id).select("-password -refreshToken");  //we made another call to database beacuse the user we got above did not had the refresh token because it was null.
+    const loggedinuser = await User.findById(user._id).select("-password");  //we made another call to database beacuse the user we got above did not had the refresh token because it was null.
     const options = {
         httpOnly: true,
         secure: true
@@ -426,10 +428,66 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
     if (previousCoverImagePublicId) {
         await DeleteFileCloudinary(previousCoverImagePublicId, coverimageFolder);
     }
+    // const video = await Video.find()
     await User.findByIdAndDelete(req.user?._id);
     return res.status(200).json(
         new ApiResponse(200, {}, "User Deleted Successfully")
     )
 })
 
-export { registerUser, loginUser, logoutUser, refereshAccessToken, changeCurrentPassword, getCurrentUser, upDateUserDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getUserWatchHistory, deleteUserAccount };
+const forgotPassword = asyncHandler(async (req, res)=>{
+    const {email} = req.body;
+    if (!email) {
+        throw new ApiError(410, "Email Is Missing");
+    }
+    const user = await User.findOne({email});
+    if (!user) {
+        throw new ApiError(400, "User Does Not Exist");
+    }
+    const resetPassWordToken = user.generatePasswordRefreshToken();
+    await user.save({ValidateBeforeSave: false})
+    // const resetPasswordUrl = `${req.protocol}://${req.get(
+    //     'host'
+    // )}/api/v1/users/reset-password/${resetPassWordToken}`;
+    // const message = `Your Password Reset Token: ${resetPasswordUrl}\n\nIf you have not requested to reset your password, please ignore this email. Have a nice day!`;
+    const message = `Your Password Reset Token: ${resetPassWordToken}\n\nIf you have not requested to reset your password, please ignore this email. Have a nice day!`;
+    try {
+        await sendmail({
+            email: user.email,
+            subject: "Password Reset Request",
+            message
+        });
+        return res.status(200).json(
+            new ApiResponse(200, {}, "Email Sent Successfully")
+        );
+    } catch (error) {
+        user.passwordRefreshToken = undefined;
+        user.passwordResetTokenExpiry = undefined;
+        await user.save({ validateBeforeSave: false });
+        throw new ApiError(500, "There was an error in sending the mail");
+    }
+})
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const user = await User.findOne({
+        passwordRefreshToken: req.params.token,
+        passwordResetTokenExpiry: { $gt: Date.now() },
+    });
+    if (!user) {
+        throw new ApiError(408, "User Does not exists or the token is expired")
+    }
+
+    if (req.body.password !== req.body.confirmpassword) {
+        throw new ApiError(408, "Passwords Do not match")
+    }
+
+    user.password = req.body.password;
+    user.passwordRefreshToken = undefined;
+    user.passwordResetTokenExpiry = undefined;
+    await user.save();
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Password Updated Successfully")
+    )
+});
+
+export { registerUser, loginUser, logoutUser, refereshAccessToken, changeCurrentPassword, getCurrentUser, upDateUserDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getUserWatchHistory, deleteUserAccount, forgotPassword, resetPassword };
