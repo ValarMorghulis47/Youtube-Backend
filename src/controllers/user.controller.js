@@ -8,7 +8,10 @@ import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 import { Video } from "../models/video.model.js"
 import { sendmail } from "../utils/SendEmail.js"
-
+import { Like } from "../models/like.model.js"
+import { Comment } from "../models/comment.model.js"
+import { Playlist } from "../models/playlist.model.js"
+import { Tweet } from "../models/tweet.model.js"
 const generateTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -428,24 +431,52 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
     if (previousCoverImagePublicId) {
         await DeleteFileCloudinary(previousCoverImagePublicId, coverimageFolder);
     }
-    // const video = await Video.find()
+    //Delete all the videos of the user along with its thumbnail and video from cloudinary
+    const video = await Video.find({ owner: req.user?._id });
+    if (video?.length) {
+        video.forEach(async (v) => {
+            const videoPublicId = v.videoPublicId;
+            const thumbnailPublicId = v.thumbnailPublicId;
+            const videoFolder = "video";
+            const thumbnailFolder = "thumbnail";
+            if (videoPublicId) {
+                await DeleteFileCloudinary(videoPublicId, videoFolder);
+            }
+            if (thumbnailPublicId) {
+                await DeleteFileCloudinary(thumbnailPublicId, thumbnailFolder);
+            }
+        })
+    }
+    await video.deleteMany({ owner: req.user?._id });
+    //Delete all the likes of the user.
+    const likes = await Like.find({ likedBy: req.user?._id });
+    await likes.deleteMany({ likedBy: req.user?._id });
+    //Delete all the comments of the user.
+    const comments = await Comment.find({ owner: req.user?._id });
+    await comments.deleteMany({ owner: req.user?._id });
+    //Delete all playlists of the user.
+    const playlists = await Playlist.find({ owner: req.user?._id });
+    await playlists.deleteMany({ owner: req.user?._id });
+    //Delete all tweets of the user.
+    const tweets = await Tweet.find({ owner: req.user?._id });
+    await tweets.deleteMany({ owner: req.user?._id });
     await User.findByIdAndDelete(req.user?._id);
     return res.status(200).json(
         new ApiResponse(200, {}, "User Deleted Successfully")
     )
 })
 
-const forgotPassword = asyncHandler(async (req, res)=>{
-    const {email} = req.body;
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
     if (!email) {
         throw new ApiError(410, "Email Is Missing");
     }
-    const user = await User.findOne({email});
+    const user = await User.findOne({ email });
     if (!user) {
         throw new ApiError(400, "User Does Not Exist");
     }
     const resetPassWordToken = user.generatePasswordRefreshToken();
-    await user.save({ValidateBeforeSave: false})
+    await user.save({ ValidateBeforeSave: false })
     // const resetPasswordUrl = `${req.protocol}://${req.get(
     //     'host'
     // )}/api/v1/users/reset-password/${resetPassWordToken}`;
